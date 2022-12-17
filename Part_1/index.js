@@ -115,6 +115,12 @@ function uploadMiddleware(req, res, next) {
   });
 }
 
+function convertToSlug(Text) {
+  return Text.toLowerCase()
+    .replace(/ /g, "_")
+    .replace(/[^\w-]+/g, "");
+}
+
 app.post(
   "/post",
   uploadMiddleware,
@@ -130,8 +136,6 @@ app.post(
       ...req.body,
     };
     myObject.push(postData);
-    console.log(myObject);
-
     var newData = JSON.stringify(myObject);
     fs.writeFileSync("blogs.json", newData, (err) => {
       // error checking
@@ -143,6 +147,20 @@ app.post(
     });
   }
 );
+
+app.get("/posts", (req, res) => {
+  let data = fs.readFileSync("blogs.json");
+  var myObject = JSON.parse(data);
+  let result = [];
+  myObject.map((post) => {
+    const { date_time, title } = post;
+    post.date_time = new Date(date_time).toISOString();
+    post.title = convertToSlug(title);
+    let data = { ...post };
+    result.push(data);
+  });
+  res.status(200).json(result);
+});
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
