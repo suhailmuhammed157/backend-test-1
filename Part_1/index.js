@@ -2,13 +2,22 @@ const express = require("express");
 const schemas = require("./schemas/schemas");
 const middleware = require("./middleware/joi.middleware");
 const path = require("path");
+
 const sharp = require("sharp");
 const fs = require("fs");
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
+
+const app = express();
+const port = 3000;
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 const multer = require("multer");
 const storage = multer.diskStorage({
   destination: async function (req, files, cb) {
-    cb(null, "./images/");
+    cb(null, "./images");
   },
   filename: function (req, files, cb) {
     cb(
@@ -70,12 +79,6 @@ const upload = multer({
 //   next();
 // };
 
-const app = express();
-const port = 3000;
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-
 const uploadImages = upload.fields([
   {
     name: "main_image",
@@ -97,19 +100,15 @@ function uploadMiddleware(req, res, next) {
     if (typeof req.files.main_image === "undefined") {
       return res.status(400).json("main_image is required");
     } else {
-      // console.log(req.files.main_image[0].path);
-      req.body.main_image = req.files.main_image[0].path;
+      req.body.main_image = req.files.main_image[0].path.replace("\\", "/");
     }
 
     if (typeof req.files.additional_images !== "undefined") {
       req.body.additional_images = [];
       req.files.additional_images.map((image) => {
-        req.body.additional_images.push(image.path);
+        req.body.additional_images.push(image.path.replace("\\", "/"));
       });
     }
-
-    console.log(req.body);
-
     // Everything went fine.
     next();
   });
@@ -161,6 +160,32 @@ app.get("/posts", (req, res) => {
   });
   res.status(200).json(result);
 });
+
+app.post("/image", (req, res) => {
+  const { imagePath } = req.body;
+  if (!imagePath)
+    res.status(400).json({
+      message: "imagePath is required",
+    });
+
+  const accessToken = jwt.sign(
+    {
+      image_path: imagePath,
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: "5m" }
+  );
+
+  res.status(200).json({ accessToken: accessToken });
+});
+
+app.use(
+  "/images",
+  (req, res, next) => {
+    res.status(400).json("Error");
+  },
+  express.static("images")
+);
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
