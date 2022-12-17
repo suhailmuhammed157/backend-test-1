@@ -130,15 +130,17 @@ app.post(
       ...req.body,
     };
     myObject.push(postData);
+    console.log(myObject);
 
     var newData = JSON.stringify(myObject);
-    fs.writeFile("blog.json", newData, (err) => {
+    fs.writeFileSync("blogs.json", newData, (err) => {
       // error checking
       if (err) throw err;
-      console.log("New data added");
+      console.log("data added succesfully");
     });
-
-    res.send("Hello worlddd");
+    res.status(200).json({
+      data: postData,
+    });
   }
 );
 
