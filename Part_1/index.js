@@ -15,6 +15,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 const multer = require("multer");
+const verifyJWT = require("./middleware/verifyJWT.middleware");
+const verifyImage = require("./middleware/verifyImage.middleware");
 const storage = multer.diskStorage({
   destination: async function (req, files, cb) {
     cb(null, "./images");
@@ -120,15 +122,18 @@ function convertToSlug(Text) {
     .replace(/[^\w-]+/g, "");
 }
 
+/* APIs */
+
+/* /post api to add new post to blogs.json */
 app.post(
   "/post",
   uploadMiddleware,
   // resizeImages,
   middleware(schemas.blogPOST),
   (req, res) => {
-    var data = fs.readFileSync("blogs.json");
+    var data = fs.readFileSync("blogs.json"); //read data from file blogs.json
     var myObject = JSON.parse(data);
-    const reference = Number(myObject.at(-1).reference) + 1;
+    const reference = Number(myObject.at(-1).reference) + 1; //ncrement referece
     req.body.date_time = +req.body.date_time;
     const postData = {
       reference: "0000" + reference,
@@ -137,6 +142,7 @@ app.post(
     myObject.push(postData);
     var newData = JSON.stringify(myObject);
     fs.writeFileSync("blogs.json", newData, (err) => {
+      //write newly added post to blogs.json
       // error checking
       if (err) throw err;
       console.log("data added succesfully");
@@ -147,6 +153,7 @@ app.post(
   }
 );
 
+/* API for getting all posts*/
 app.get("/posts", (req, res) => {
   let data = fs.readFileSync("blogs.json");
   var myObject = JSON.parse(data);
@@ -161,9 +168,11 @@ app.get("/posts", (req, res) => {
   res.status(200).json(result);
 });
 
+/* API for creating access token for image with image path as body*/
 app.post("/image", (req, res) => {
   const { imagePath } = req.body;
   if (!imagePath)
+    //if no body
     res.status(400).json({
       message: "imagePath is required",
     });
@@ -179,13 +188,8 @@ app.post("/image", (req, res) => {
   res.status(200).json({ accessToken: accessToken });
 });
 
-app.use(
-  "/images",
-  (req, res, next) => {
-    res.status(400).json("Error");
-  },
-  express.static("images")
-);
+/* API for getting an image with path and access token */
+app.use("/images", verifyJWT, verifyImage, express.static("images"));
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
