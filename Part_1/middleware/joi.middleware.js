@@ -8,9 +8,18 @@ const middleware = (schema) => {
       next();
     } else {
       const { details } = error;
-      const message = details.map((i) => i.message).join(",");
-
-      console.log("error", message);
+      console.log(details);
+      var message;
+      switch (details[0].type) {
+        case "string.pattern.base":
+          message = details[0].context.label + " contains special character";
+          break;
+        case "any.required":
+          message = details[0].context.label + " is required";
+          break;
+        default:
+          message = "not unix time";
+      }
       res.status(422).json({ error: message });
     }
   };

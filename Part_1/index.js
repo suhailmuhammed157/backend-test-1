@@ -22,10 +22,7 @@ const storage = multer.diskStorage({
     cb(null, "./images");
   },
   filename: function (req, files, cb) {
-    cb(
-      null,
-      files.fieldname + "-" + Date.now() + path.extname(files.originalname)
-    );
+    cb(null, files.originalname);
   },
 });
 
@@ -95,8 +92,9 @@ function uploadMiddleware(req, res, next) {
   uploadImages(req, res, async function (err) {
     if (err instanceof multer.MulterError) {
       // A Multer error occurred when uploading.
-      console.log("A Multer error occurred when uploading.");
-      return res.status(400).json(err.message);
+      return res.status(400).json({
+        error: err.field + " " + err.message,
+      });
     }
 
     if (typeof req.files.main_image === "undefined") {
@@ -128,8 +126,8 @@ function convertToSlug(Text) {
 app.post(
   "/post",
   uploadMiddleware,
-  // resizeImages,
   middleware(schemas.blogPOST),
+  // resizeImages,
   (req, res) => {
     var data = fs.readFileSync("blogs.json"); //read data from file blogs.json
     var myObject = JSON.parse(data);
@@ -191,6 +189,4 @@ app.post("/image", (req, res) => {
 /* API for getting an image with path and access token */
 app.use("/images", verifyJWT, verifyImage, express.static("images"));
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
+module.exports = app;
